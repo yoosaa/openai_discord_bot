@@ -18,25 +18,32 @@ async def on_ready():
 # メッセージを受信した時に呼ばれる
 @client.event
 async def on_message(message):
-  # 自分のメッセージを無効に
-  if message.author == client.user:
+  completion = await handleMessage(message)
+  if not completion:
     return
+  else:
+    await message.channel.send(completion)
+
+client.run(CONFIG['DISCORD_TOKEN'])
+
+
+async def handleMessage(msg):
+  # 自分のメッセージを無効に
+  if msg.author == client.user:
+    return False
 
   # botにメンションしたら
-  if bool(message.mentions) and message.mentions[0].name == CONFIG['DISCORD_BOT_NAME']:
+  if bool(msg.mentions) and msg.mentions[0].name == CONFIG['DISCORD_BOT_NAME']:
     # メッセージがない or ある
-    if len(message.content) <= 22:
-      await message.channel.send('何か御用でしょうか？')
+    if len(msg.content) <= 22:
+      return '何か御用でしょうか？'
     else:
       openai.api_key = CONFIG['OPENAI_TOKEN']
       # api通信
-      res = openai.ChatCompletion.create(
+      res = await openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-          {"role": "user", "content": str(message.content)}
+          {"role": "user", "content": str(msg.content)}
         ]
       )
-      completion = res["choices"][0]["message"]["content"]
-      await message.channel.send(completion)
-
-client.run(CONFIG['DISCORD_TOKEN'])
+      return res["choices"][0]["message"]["content"]
